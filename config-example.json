@@ -1,0 +1,42 @@
+{
+    "log": {
+        "level": "error",
+        "output": "/tmp/go-realm.log"
+    },
+    "network": {
+        "no_tcp": false,
+        "use_udp": true,
+        "zero_copy": true,
+        "fast_open": true,
+        "udp_timeout": 30,
+        "send_proxy": false,
+        "send_proxy_version": 2,
+        "accept_proxy": false,
+        "accept_proxy_timeout": 5
+    },
+    "dns": {
+        "mode": "ipv4_and_ipv6",
+        "protocol": "tcp_and_udp",
+        "nameservers": [
+            "8.8.8.8:53",
+            "[2001:4860:4860::8888]:53"
+        ],
+        "min_ttl": 600,
+        "max_ttl": 3600,
+        "cache_size": 256
+    },
+    "endpoints": [
+        {
+            "local": "0.0.0.0:15555",
+            "remote": "node.example.com:15555",
+            "rate_limit": "100MB/s",
+            "stats_enabled": false
+        },
+        {
+            "local": "0.0.0.0:35901",
+            "remote": "1.2.3.4:35901",
+            "rate_limit": "100MB/s",
+            "stats_enabled": true
+        }
+    ]
+}
