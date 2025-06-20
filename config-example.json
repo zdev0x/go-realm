@@ -8,11 +8,7 @@
         "use_udp": true,
         "zero_copy": true,
         "fast_open": true,
-        "udp_timeout": 30,
-        "send_proxy": false,
-        "send_proxy_version": 2,
-        "accept_proxy": false,
-        "accept_proxy_timeout": 5
+        "udp_timeout": 30
     },
     "dns": {
         "mode": "ipv4_and_ipv6",
