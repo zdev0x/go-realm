@@ -1,4 +1,4 @@
-package main
+package pool
 
 import (
 	"fmt"
@@ -189,4 +189,20 @@ func (b *DynamicBuffer) GetBuffer() []byte {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.buf
+}
+
+// min 返回两个整数中的较小值
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+// max 返回两个整数中的较大值
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }

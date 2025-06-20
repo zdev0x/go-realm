@@ -1,4 +1,4 @@
-package main
+package pool
 
 import (
 	"sync"
@@ -58,7 +58,7 @@ func (p *BufferPool) Put(buf []byte) {
 	p.pool.Put(buf)
 }
 
-// Stats 返回池的统计信息
+// BufferPoolStats 返回池的统计信息
 type BufferPoolStats struct {
 	Size          int   // buffer 大小
 	AllocCount    int64 // 总分配次数

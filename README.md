@@ -1,238 +1,422 @@
-项目功能说明
-本项目是一个基于 Go 语言开发的网络流量转发工具，参考 realm (https://github.com/zhboner/realm) 的配置格式和功能设计，旨在提供高效、可靠的 TCP 和 UDP 流量转发服务。项目支持 IPv6 转发、域名解析、透明转发（无需解析上层协议如 SOCKS5 或 HTTP）、限速以及流量统计功能，适用于多种网络场景，如代理服务、端口转发和网络调试。以下是项目的详细功能说明。
-1. 核心功能
-1.1 流量转发
+# Go-Realm
 
-TCP 转发：
-支持监听本地 TCP 端口（如 [::]:8080 或 0.0.0.0:8080），将数据透明转发到目标地址（IP 或域名，如 example.com:80 或 [2001:db8::1]:80）。
-实现双向数据传输，适用于 HTTP、SOCKS5 等协议。
+[![Go Version](https://img.shields.io/badge/Go-1.20%2B-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+高性能、多功能的网络端口转发工具，支持 TCP/UDP、IPv6、域名解析、限速和流量统计。
 
-UDP 转发：
-支持监听本地 UDP 端口（如 [::]:53），将数据报转发到目标地址（如 [2001:db8::1]:53）。
-支持双向 UDP 数据交换，适用于 DNS 查询等场景。
+![Go-Realm Banner](https://via.placeholder.com/800x200?text=Go-Realm)
 
+## 📋 简介
 
-透明转发：
-不解析上层协议（如 SOCKS5、HTTP），直接转发原始数据流，客户端和目标服务器负责协议处理。
-兼容多种应用层协议，降低程序复杂度。
+Go-Realm 是一个基于 Go 语言开发的网络流量转发工具，参考 [realm](https://github.com/zhboner/realm) 的配置格式和功能设计，提供高效、可靠的 TCP 和 UDP 流量转发服务。项目采用模块化设计，支持 IPv6 转发、域名解析、透明转发、限速以及流量统计功能，适用于多种网络场景。
 
+### 核心优势
 
+- **高性能**：采用 Go 语言并发模型，支持高并发连接
+- **零拷贝**：Linux 系统下支持零拷贝技术，提升传输效率
+- **全面兼容**：完全兼容 realm 的配置格式，便于迁移
+- **IPv6 支持**：全面支持 IPv6 监听、转发和域名解析
+- **模块化设计**：清晰的代码结构，易于维护和扩展
 
-1.2 IPv6 支持
+## ✨ 特性
 
-监听端：支持在 IPv6 地址（如 [::]:8080）上监听 TCP 和 UDP。
-转发端：支持连接到 IPv6 目标地址（如 [2001:db8::1]:80）或通过域名解析获得的 IPv6 地址。
-地址格式：正确处理 IPv6 地址格式（如 [ip]:port），确保兼容性。
+- **TCP/UDP 转发**
+  - 支持 TCP 和 UDP 协议的透明转发
+  - 无需解析上层协议（如 SOCKS5、HTTP），直接转发原始数据流
+  - 支持双向数据传输，适用于各种应用层协议
 
-1.3 域名解析
+- **IPv6 全面支持**
+  - 支持在 IPv6 地址上监听（如 `[::]:8080`）
+  - 支持连接到 IPv6 目标地址（如 `[2001:db8::1]:80`）
+  - 支持通过域名解析获得 IPv6 地址
 
-DNS 配置：
-支持自定义 DNS 服务器（支持 IPv4 和 IPv6，如 8.8.8.8:53 和 [2001:4860:4860::8888]:53）。
-支持 DNS 查询协议（tcp_and_udp，默认优先 UDP）。
+- **智能域名解析**
+  - 可配置 DNS 服务器（支持 IPv4 和 IPv6）
+  - 多种解析模式：仅 IPv4、仅 IPv6、IPv4+IPv6
+  - DNS 缓存机制，减少重复查询
 
+- **精准限速控制**
+  - 为每个转发端点单独配置限速
+  - 支持人性化的速率表示（如 "10MB/s"）
+  - 基于 `golang.org/x/time/rate` 实现精准流量控制
 
-解析模式：
-ipv4_only：仅解析 IPv4 地址。
-ipv6_only：仅解析 IPv6 地址。
-ipv4_and_ipv6：优先解析 IPv6 地址，若无则回退到 IPv4。
+- **实时流量统计**
+  - 记录每个端点的入站和出站流量
+  - 监控连接数量和速率
+  - 支持人性化的流量展示
 
+- **零拷贝优化**
+  - Linux 系统下支持零拷贝技术
+  - 减少数据复制和内存使用
+  - 提高大流量场景下的性能
 
-DNS 缓存：
-使用 github.com/hashicorp/golang-lru 实现 DNS 解析结果缓存，减少重复查询。
-支持配置缓存大小（cache_size）和 TTL（min_ttl 和 max_ttl）。
+- **高级连接池**
+  - 连接复用，减少建立连接的开销
+  - 动态缓冲区，根据流量自动调整大小
+  - 提升高并发场景下的性能
 
+## 🚀 安装
 
+### 系统要求
 
-1.4 限速功能
+- Go 1.20 或更高版本
+- 支持 Linux、Windows、macOS（零拷贝功能仅支持 Linux）
+- 支持 IPv4/IPv6 的网络环境
 
-带宽限制：为每个转发端点（endpoint）配置限速（rate_limit_bps），单位为字节每秒。
-实现方式：使用 golang.org/x/time/rate 库，在 TCP 和 UDP 连接上实现精准的流量控制。
-适用场景：防止流量过载，优化带宽分配。
+### 从源码安装
 
-1.5 流量统计
+```bash
+# 克隆仓库
+git clone https://github.com/zdev0x/go-realm.git
+cd go-realm
 
-统计内容：记录每个端点的入站（BytesIn）和出站（BytesOut）流量，以及最后更新时间（LastUpdated）。
-启用方式：通过 stats_enabled 字段控制是否启用统计。
-日志输出：每 10 秒输出一次统计信息到日志文件（如 realm.log），格式为：Stats for [::]:8080 -> example.com:80: 1024 bytes in, 2048 bytes out, last updated: 2025-06-20 15:45:50
+# 安装依赖
+go mod download
 
+# 编译
+go build -o go-realm ./cmd/go-realm
 
+# 安装到系统路径（可选）
+sudo mv go-realm /usr/local/bin/
+```
 
-1.6 日志管理
+### 使用 Go Install（可选）
 
-日志级别：支持 warn 级别，记录关键错误和运行状态。
-输出位置：支持输出到文件（如 realm.log）或标准输出。
-日志内容：包括监听状态、连接错误、流量统计等，便于调试和监控。
+```bash
+go install github.com/zdev0x/go-realm/cmd/go-realm@latest
+```
 
-1.7 配置文件
+## 🏁 快速开始
 
-格式：采用 JSON 格式，与 realm 配置兼容，包含以下部分：
-log：日志配置（级别、输出文件）。
-network：网络设置（是否禁用 TCP、是否启用 UDP）。
-dns：DNS 配置（模式、协议、服务器、TTL、缓存大小）。
-endpoints：转发规则（本地地址、目标地址、限速、统计开关）。
+### 基本配置
 
+创建一个简单的配置文件 `config.json`：
 
-示例：{
-    "log": {
-        "level": "warn",
-        "output": "realm.log"
-    },
-    "network": {
-        "no_tcp": false,
-        "use_udp": true
-    },
-    "dns": {
-        "mode": "ipv4_and_ipv6",
-        "protocol": "tcp_and_udp",
-        "nameservers": [
-            "8.8.8.8:53",
-            "[2001:4860:4860::8888]:53"
-        ],
-        "min_ttl": 600,
-        "max_ttl": 3600,
-        "cache_size": 256
-    },
-    "endpoints": [
-        {
-            "local": "[::]:8080",
-            "remote": "example.com:80",
-            "rate_limit_bps": 1024000,
-            "stats_enabled": true
-        },
-        {
-            "local": "[::]:1080",
-            "remote": "socks5.example.com:2008",
-            "rate_limit_bps": 1024000,
-            "stats_enabled": true
-        },
-        {
-            "local": "[::]:53",
-            "remote": "[2001:db8::1]:53",
-            "rate_limit_bps": 512000,
-            "stats_enabled": true
-        }
-    ]
+```json
+{
+  "log": {
+    "level": "warn",
+    "output": "go-realm.log"
+  },
+  "endpoints": [
+    {
+      "local": "0.0.0.0:8080",
+      "remote": "example.com:80",
+      "stats_enabled": true
+    }
+  ]
 }
+```
 
+### 运行服务
 
+```bash
+./go-realm -config config.json
+```
 
-2. 高级功能
-2.1 错误处理与鲁棒性
+### 测试转发
 
-连接重试：当连接目标服务器失败时，最多重试 3 次，采用指数退避（1s、2s、3s）。
-超时管理：为目标 TCP 连接设置 30 秒读写超时，防止因服务器无响应而挂起。
-错误抑制：忽略常见的 broken pipe 错误（连接被远程关闭），仅记录关键错误，减少日志冗余。
-增强日志：记录客户端地址和端点信息，便于定位问题。
+```bash
+# 测试 HTTP 转发
+curl http://localhost:8080
 
-2.2 协议转发
+# 如果配置了 SOCKS5 转发
+curl --socks5 localhost:1080 http://example.com
+```
 
-协议选择：通过 network.no_tcp 和 network.use_udp 配置是否启用 TCP 和/或 UDP 转发。
-动态地址解析：支持直接使用 IP 地址（IPv4 或 IPv6）或通过域名解析获取目标地址。
+## ⚙️ 配置详解
 
-2.3 性能优化
+Go-Realm 使用 JSON 格式的配置文件，完全兼容 realm 的配置格式。
 
-DNS优化缓存：减少 DNS 查询开销，提升转发性能。
-并发处理：每个端点在独立 goroutine 中运行，支持高并发连接。
-限速精度：使用 rate.Limiter 确保流量控制的精确性。
+### 配置文件结构
 
-3. 使用场景
+配置文件包含四个主要部分：
 
-代理服务：
-支持 SOCKS5 代理（如 curl --socks5 [::1]:1080），客户端处理协议握手，程序透明转发。
-适用于 HTTP 代理场景（如 curl http://[::1]:8080）。
+```json
+{
+  "log": { ... },      // 日志配置
+  "network": { ... },  // 网络配置
+  "dns": { ... },      // DNS 配置
+  "endpoints": [ ... ] // 转发端点配置
+}
+```
 
+### 日志配置
 
-端口转发：
-将本地端口（如 [::]:53）的流量转发到远程服务器（如 DNS 服务器 [::1]:8086）。
+```json
+"log": {
+  "level": "warn",           // 日志级别：warn, error
+  "output": "go-realm.log"   // 日志输出文件，留空则输出到标准输出
+}
+```
 
+### 网络配置
 
-网络调试：
-通过流量统计和日志，监控网络流量和流量状态，适合调试网络应用。
+```json
+"network": {
+  "no_tcp": false,           // 是否禁用 TCP 转发
+  "use_udp": true,           // 是否启用 UDP 转发
+  "zero_copy": true,         // 是否启用零拷贝（Linux 系统）
+  "fast_open": true,         // 是否启用 TCP Fast Open
+  "udp_timeout": 30,         // UDP 会话超时时间（秒）
+  "send_proxy": false,       // 是否发送 PROXY 协议头
+  "send_proxy_version": 2,   // PROXY 协议版本
+  "accept_proxy": false,     // 是否接受 PROXY 协议头
+  "accept_proxy_timeout": 5  // 接受 PROXY 协议头的超时时间（秒）
+}
+```
 
+### DNS 配置
 
-IPv6 迁移：
-支持 IPv6 监听和转发，助力网络从 IPv4 向 IPv6 过渡。
+```json
+"dns": {
+  "mode": "ipv4_and_ipv6",   // DNS 解析模式：ipv4_only, ipv6_only, ipv4_and_ipv6
+  "protocol": "tcp_and_udp", // DNS 查询协议：tcp, udp, tcp_and_udp
+  "nameservers": [           // DNS 服务器列表
+    "8.8.8.8:53",
+    "[2001:4860:4860::8888]:53"
+  ],
+  "min_ttl": 600,            // 最小 TTL（秒）
+  "max_ttl": 3600,           // 最大 TTL（秒）
+  "cache_size": 256          // DNS 缓存大小
+}
+```
 
+### 端点配置
 
+```json
+"endpoints": [
+  {
+    "local": "0.0.0.0:8080",     // 本地监听地址
+    "remote": "example.com:80",  // 远程目标地址
+    "rate_limit": "10MB/s",      // 速率限制（支持 KB/s, MB/s, GB/s 等）
+    "stats_enabled": true        // 是否启用流量统计
+  }
+]
+```
 
-4. 依赖与环境要求
+### 完整配置示例
 
-Go 版本：兼容 Go 1.16 及以上。
-依赖库：
-golang.org/x/time/rate：用于限速。
-github.com/hashicorp/golang-lru：用于 DNS 缓存。
+```json
+{
+  "log": {
+    "level": "warn",
+    "output": "go-realm.log"
+  },
+  "network": {
+    "no_tcp": false,
+    "use_udp": true,
+    "zero_copy": true,
+    "fast_open": true,
+    "udp_timeout": 30,
+    "send_proxy": false,
+    "send_proxy_version": 2,
+    "accept_proxy": false,
+    "accept_proxy_timeout": 5
+  },
+  "dns": {
+    "mode": "ipv4_and_ipv6",
+    "protocol": "tcp_and_udp",
+    "nameservers": [
+      "8.8.8.8:53",
+      "[2001:4860:4860::8888]:53"
+    ],
+    "min_ttl": 600,
+    "max_ttl": 3600,
+    "cache_size": 256
+  },
+  "endpoints": [
+    {
+      "local": "0.0.0.0:8080",
+      "remote": "example.com:80",
+      "rate_limit": "10MB/s",
+      "stats_enabled": true
+    },
+    {
+      "local": "[::]:1080",
+      "remote": "socks-server.example.com:1080",
+      "rate_limit": "5MB/s",
+      "stats_enabled": true
+    },
+    {
+      "local": "0.0.0.0:53",
+      "remote": "8.8.8.8:53",
+      "rate_limit": "1MB/s",
+      "stats_enabled": false
+    }
+  ]
+}
+```
 
+## 🔍 使用场景
 
-网络环境：
-支持 IPv4/IPv6 地址的网络接口。
-可访问的 DNS 服务器（如 8.8.8.8 或 [2001:4860:4860::8888）。
+### HTTP 代理转发
 
+将本地 8080 端口的流量转发到远程 HTTP 代理服务器：
 
-操作系统：跨平台支持（Linux、Windows、macOS）。
+```json
+{
+  "endpoints": [
+    {
+      "local": "0.0.0.0:8080",
+      "remote": "http-proxy.example.com:8080",
+      "stats_enabled": true
+    }
+  ]
+}
+```
 
-5. 测试方法
+### SOCKS5 代理转发
 
-安装依赖：go get golang.org/x/time/rate
-go get github.com/hashicorp/golang-lru
+将本地 1080 端口的流量转发到远程 SOCKS5 代理服务器：
 
+```json
+{
+  "endpoints": [
+    {
+      "local": "0.0.0.0:1080",
+      "remote": "socks5-server.example.com:1080",
+      "stats_enabled": true
+    }
+  ]
+}
+```
 
-保存配置文件：
-将 config.json 保存到项目目录。
+### DNS 转发
 
+将本地 DNS 查询转发到指定的 DNS 服务器：
 
-运行程序：go run forwarder.go
+```json
+{
+  "network": {
+    "use_udp": true
+  },
+  "endpoints": [
+    {
+      "local": "0.0.0.0:53",
+      "remote": "8.8.8.8:53",
+      "stats_enabled": true
+    }
+  ]
+}
+```
 
+### IPv6 迁移
 
-测试用例：
-HTTP 转发：curl http://[::1]:8080
+支持 IPv4 到 IPv6 的转发：
 
+```json
+{
+  "endpoints": [
+    {
+      "local": "0.0.0.0:8080",
+      "remote": "[2001:db8::1]:80",
+      "stats_enabled": true
+    }
+  ]
+}
+```
 
-转发到 example.com:80。
+## 📁 项目结构
 
+项目采用模块化设计，目录结构如下：
 
-SOCKS5 转发：curl --socks5 [::1]:1080 http://example.com
+```
+go-realm/
+├── cmd/                  # 命令行工具
+│   └── go-realm/         # 主程序入口
+├── internal/             # 内部包
+│   ├── config/           # 配置相关
+│   ├── forwarder/        # 转发器核心逻辑
+│   ├── logger/           # 日志功能
+│   ├── pool/             # 连接池和缓冲区
+│   ├── stats/            # 统计功能
+│   └── zerocopy/         # 零拷贝实现
+└── pkg/                  # 公共包
+    └── utils/            # 工具函数
+```
 
+### 核心模块说明
 
-转发到 socks5.example.com:2008。
+- **cmd/go-realm**: 主程序入口，处理命令行参数和配置加载
+- **internal/config**: 配置解析和验证
+- **internal/forwarder**: 核心转发逻辑，处理 TCP/UDP 转发
+- **internal/logger**: 日志记录和管理
+- **internal/pool**: 连接池和缓冲区管理，优化连接复用
+- **internal/stats**: 流量统计和监控
+- **internal/zerocopy**: 零拷贝实现，提升传输效率
+- **pkg/utils**: 通用工具函数，如格式化和网络辅助函数
 
+## 🔧 高级特性
 
-UDP 转发（DNS）：dig @::1 -p 53 example.com
+### 零拷贝优化
 
+在 Linux 系统上，Go-Realm 可以使用零拷贝技术（splice 系统调用）来减少数据在内核和用户空间之间的复制，显著提升大流量场景下的性能。
 
-转发到 [2001:db8::1]:53。
+启用零拷贝：
 
+```json
+"network": {
+  "zero_copy": true
+}
+```
 
+### 动态缓冲区
 
+Go-Realm 实现了动态缓冲区机制，可以根据实际流量自动调整缓冲区大小，在保证性能的同时优化内存使用。
 
-检查日志：
-查看 realm.log 中的监听状态、错误和流量统计。
+### 连接池管理
 
+通过连接池机制，Go-Realm 可以复用到远程服务器的连接，减少连接建立的开销，提升高并发场景下的性能。
 
+## ❓ 常见问题
 
-6. 注意事项
+### 性能相关
 
-IPv6 环境：确保系统启用 IPv6，且目标服务器支持 IPv6（若使用 ipv6_only 或 ipv4_and_ipv6 模式）。
-SOCKS5 兼容性：客户端需处理 SOCKS5 握手，程序仅透明转发。
-DNS 配置：确保 nameservers 中的 DNS 服务器可用，建议包含 IPv6 服务器。
-限速设置：合理配置 rate_limit_bps，避免过低导致性能瓶颈。
-日志管理：定期清理 realm.log，防止占用过多磁盘空间。
+**Q: Go-Realm 的性能如何？**  
+A: 在标准硬件上，单个 Go-Realm 实例可以轻松处理数千并发连接，在启用零拷贝的 Linux 系统上性能更佳。
 
-7. 可能的扩展方向
+**Q: 如何优化高并发场景？**  
+A: 增加系统文件描述符限制，调整网络参数，并考虑使用零拷贝功能。
 
-动态配置重载：支持运行时重新加载 config.json，无需重启程序。
-TLS 支持：为 HTTPS 或加密 SOCKS5 添加 TLS 连接。
-更细粒度的日志级别：支持 debug、info 等级别，增强调试能力。
-动态 DNS 更新：定期重新解析域名，刷新缓存。
-高级错误处理：区分客户端和服务器端连接关闭，提供更精准的错误报告。
+### 配置相关
 
-8. 项目优势
+**Q: 如何动态更新配置？**  
+A: 目前需要重启服务来应用新配置，未来版本可能支持热重载。
 
-与 realm 兼容：配置文件格式一致，便于迁移和集成。
-IPv6 全面支持：覆盖监听、转发和 DNS 解析，适应未来网络趋势。
-透明转发：无需解析上层协议，兼容性强，性能高。
-限速与统计：提供带宽控制和流量监控，适合生产环境。
-鲁棒性：通过重试机制、超时管理和错误抑制，确保稳定运行。
+**Q: 支持多少个转发端点？**  
+A: 理论上没有硬性限制，但建议根据系统资源合理配置。
 
-9. 总结
-本项目是一个功能强大、灵活的网络转发工具，支持 IPv6 和 IPv4 的 TCP/UDP 流量转发，具备域名解析、限速、流量统计和日志管理功能。程序设计参考 realm，在保持兼容性的同时增强了 IPv6 支持和错误处理能力，适用于代理、端口转发和网络调试等多种场景。如需进一步优化或扩展功能（如 TLS 或动态配置），请提供具体需求！
+### 兼容性相关
+
+**Q: 是否支持 Windows 系统？**  
+A: 是的，Go-Realm 支持 Windows，但零拷贝功能仅在 Linux 系统上可用。
+
+**Q: 是否支持 ARM 架构？**  
+A: 是的，Go-Realm 可以在 ARM 处理器上编译和运行。
+
+## 🤝 贡献指南
+
+欢迎贡献代码、报告问题或提出改进建议！
+
+1. Fork 本仓库
+2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 打开一个 Pull Request
+
+### 代码风格
+
+- 遵循 Go 标准代码风格
+- 使用 `gofmt` 格式化代码
+- 添加适当的注释和文档
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+
+## 🙏 致谢
+
+- [realm](https://github.com/zhboner/realm) - 提供了原始设计思路和配置格式
+- 所有贡献者和用户 - 感谢您的支持和反馈！
